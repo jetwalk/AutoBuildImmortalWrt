@@ -36,8 +36,13 @@ PACKAGES="$PACKAGES luci-app-openclash"
 PACKAGES="$PACKAGES openssh-sftp-server"
 # WireGuard 插件
 PACKAGES="$PACKAGES wireguard-tools"
-PACKAGES="$PACKAGES luci-app-wireguard"
-PACKAGES="$PACKAGES luci-i18n-wireguard-zh-cn"
+PACKAGES="$PACKAGES kmod-wireguard"
+PACKAGES="$PACKAGES luci-proto-wireguard"
+# vlmcsd 
+PACKAGES="$PACKAGES luci-i18n-vlmcsd-zh-cn"
+# Wake-on-LAN
+PACKAGES="$PACKAGES luci-app-wol"
+PACKAGES="$PACKAGES luci-i18n-wol-zh-cn"
 
 # 判断是否需要编译 Docker 插件
 if [ "$INCLUDE_DOCKER" = "yes" ]; then
