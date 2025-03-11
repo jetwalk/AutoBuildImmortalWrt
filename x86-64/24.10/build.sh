@@ -45,14 +45,7 @@ PACKAGES="$PACKAGES luci-i18n-vlmcsd-zh-cn"
 # Wake-on-LAN
 PACKAGES="$PACKAGES luci-app-wol"
 PACKAGES="$PACKAGES luci-i18n-wol-zh-cn"
-# AdGuardHome
-PACKAGES="$PACKAGES adguardhome"
-PACKAGES="$PACKAGES luci-app-adguardhome"
-PACKAGES="$PACKAGES luci-i18n-adguardhome-zh-cn"
-# mosdns
-PACKAGES="$PACKAGES mosdns"
-PACKAGES="$PACKAGES luci-app-mosdns" 
-PACKAGES="$PACKAGES luci-i18n-mosdns-zh-cn"
+
 
 # 判断是否需要编译 Docker 插件
 if [ "$INCLUDE_DOCKER" = "yes" ]; then
