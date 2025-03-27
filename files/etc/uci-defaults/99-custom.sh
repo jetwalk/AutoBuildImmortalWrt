@@ -1,103 +1,113 @@
 #!/bin/sh
-# 99-custom.sh 就是immortalwrt固件首次启动时运行的脚本 位于固件内的/etc/uci-defaults/99-custom.sh
-# Log file for debugging
+# 99-custom.sh 是 ImmortalWRT 固件首次启动时运行的脚本，位于 /etc/uci-defaults/99-custom.sh
+
 LOGFILE="/tmp/uci-defaults-log.txt"
 echo "Starting 99-custom.sh at $(date)" >> $LOGFILE
-# 设置默认防火墙规则，方便虚拟机首次访问 WebUI
-uci set firewall.@zone[1].input='ACCEPT'
 
+# 网络配置部分
+NETWORK_CONFIG_MARKER="/opt/.network_configured"
 
-# 检查配置文件pppoe-settings是否存在 该文件由build.sh动态生成
-SETTINGS_FILE="/etc/config/pppoe-settings"
-if [ ! -f "$SETTINGS_FILE" ]; then
-    echo "PPPoE settings file not found. Skipping." >> $LOGFILE
+if [ -f "$NETWORK_CONFIG_MARKER" ]; then
+    echo "Network configuration already applied. Skipping network configuration." >> $LOGFILE
 else
-   # 读取pppoe信息($enable_pppoe、$pppoe_account、$pppoe_password)
-   . "$SETTINGS_FILE"
+    echo "No network configuration marker found. Proceeding with network configuration." >> $LOGFILE
+
+    # 计算物理网卡数量（排除回环和无线设备）
+    count=0
+    ifnames=""
+    for iface in /sys/class/net/*; do
+        iface_name=$(basename "$iface")
+        if [ -e "$iface/device" ] && echo "$iface_name" | grep -Eq '^eth|^en'; then
+            count=$((count + 1))
+            ifnames="$ifnames $iface_name"
+        fi
+    done
+    ifnames=$(echo "$ifnames" | awk '{$1=$1};1')  # 清除多余空格
+
+    if [ "$count" -eq 1 ]; then
+        # 单网口设备，首次安装时使用 DHCP
+        uci set network.lan.proto='dhcp'
+        echo "Single interface detected. Setting LAN to DHCP." >> $LOGFILE
+    elif [ "$count" -gt 1 ]; then
+        # 多网口设备：第一个接口作为 WAN，其余接口为 LAN
+        wan_ifname=$(echo "$ifnames" | awk '{print $1}')
+        lan_ifnames=$(echo "$ifnames" | cut -d ' ' -f2-)
+
+        # 配置 WAN
+        uci set network.wan=interface
+        uci set network.wan.device="$wan_ifname"
+        uci set network.wan.proto='dhcp'
+
+        # 配置 WAN6（IPv6）
+        uci set network.wan6=interface
+        uci set network.wan6.device="$wan_ifname"
+
+        # 更新 LAN（br-lan 设备）
+        brlan_section=$(uci show network | grep -E "network\..*\.device='br-lan'" | cut -d'.' -f2 | head -n1)
+        if [ -z "$brlan_section" ]; then
+            echo "Error: cannot find device 'br-lan'." >> $LOGFILE
+        else
+            uci -q delete "network.$brlan_section.ports"
+            for port in $lan_ifnames; do
+                uci add_list "network.$brlan_section.ports"="$port"
+            done
+            echo "Ports of device 'br-lan' updated: $lan_ifnames" >> $LOGFILE
+        fi
+
+        # 设置 LAN 静态 IP
+        uci set network.lan.proto='static'
+        uci set network.lan.ipaddr='192.168.50.69'
+        uci set network.lan.netmask='255.255.255.0'
+        echo "Set LAN IP to 192.168.50.69" >> $LOGFILE
+    fi
+
+    # 处理 PPPoE 配置
+    SETTINGS_FILE="/etc/config/pppoe-settings"
+    if [ -f "$SETTINGS_FILE" ]; then
+        . "$SETTINGS_FILE"  # 加载 PPPoE 账号配置
+        if [ "$enable_pppoe" = "yes" ]; then
+            uci set network.wan.proto='pppoe'
+            uci set network.wan.username="$pppoe_account"
+            uci set network.wan.password="$pppoe_password"
+            uci set network.wan.peerdns='1'
+            uci set network.wan.auto='1'
+            uci set network.wan6.proto='none'
+            echo "PPPoE configuration applied." >> $LOGFILE
+        else
+            echo "PPPoE not enabled. Skipping." >> $LOGFILE
+        fi
+    else
+        echo "PPPoE settings file not found. Skipping PPPoE configuration." >> $LOGFILE
+    fi
+
+    # 标记网络已配置，避免升级时重复执行
+    touch "$NETWORK_CONFIG_MARKER"
+    echo "Network configuration completed." >> $LOGFILE
 fi
 
-# 计算网卡数量
-count=0
-ifnames=""
-for iface in /sys/class/net/*; do
-  iface_name=$(basename "$iface")
-  # 检查是否为物理网卡（排除回环设备和无线设备）
-  if [ -e "$iface/device" ] && echo "$iface_name" | grep -Eq '^eth|^en'; then
-    count=$((count + 1))
-    ifnames="$ifnames $iface_name"
-  fi
-done
-# 删除多余空格
-ifnames=$(echo "$ifnames" | awk '{$1=$1};1')
-
-# 网络设置
-if [ "$count" -eq 1 ]; then
-   # 单网口设备 类似于NAS模式 动态获取ip模式 具体ip地址取决于上一级路由器给它分配的ip 也方便后续你使用web页面设置旁路由
-   # 单网口设备 不支持修改ip 不要在此处修改ip 
-   uci set network.lan.proto='dhcp'
-elif [ "$count" -gt 1 ]; then
-   # 提取第一个接口作为WAN
-   wan_ifname=$(echo "$ifnames" | awk '{print $1}')
-   # 剩余接口保留给LAN
-   lan_ifnames=$(echo "$ifnames" | cut -d ' ' -f2-)
-   # 设置WAN接口基础配置
-   uci set network.wan=interface
-   # 提取第一个接口作为WAN
-   uci set network.wan.device="$wan_ifname"
-   # WAN接口默认DHCP
-   uci set network.wan.proto='dhcp'
-   # 设置WAN6绑定网口eth0
-   uci set network.wan6=interface
-   uci set network.wan6.device="$wan_ifname"
-   # 更新LAN接口成员
-   # 查找对应设备的section名称
-   section=$(uci show network | awk -F '[.=]' '/\.@?device\[\d+\]\.name=.br-lan.$/ {print $2; exit}')
-   if [ -z "$section" ]; then
-      echo "error：cannot find device 'br-lan'." >> $LOGFILE
-   else
-      # 删除原来的ports列表
-      uci -q delete "network.$section.ports"
-      # 添加新的ports列表
-      for port in $lan_ifnames; do
-         uci add_list "network.$section.ports"="$port"
-      done
-      echo "ports of device 'br-lan' are update." >> $LOGFILE
-   fi
-   # LAN口设置静态IP
-   uci set network.lan.proto='static'
-   # 多网口设备 支持修改为别的ip地址
-   uci set network.lan.ipaddr='192.168.50.69'
-   uci set network.lan.netmask='255.255.255.0'
-   echo "set 192.168.50.69 at $(date)" >> $LOGFILE
-   # 判断是否启用 PPPoE
-   echo "print enable_pppoe value=== $enable_pppoe" >> $LOGFILE
-   if [ "$enable_pppoe" = "yes" ]; then
-      echo "PPPoE is enabled at $(date)" >> $LOGFILE
-      # 设置ipv4宽带拨号信息
-      uci set network.wan.proto='pppoe'
-      uci set network.wan.username=$pppoe_account
-      uci set network.wan.password=$pppoe_password
-      uci set network.wan.peerdns='1'
-      uci set network.wan.auto='1'
-      # 设置ipv6 默认不配置协议
-      uci set network.wan6.proto='none'
-      echo "PPPoE configuration completed successfully." >> $LOGFILE
-   else
-      echo "PPPoE is not enabled. Skipping configuration." >> $LOGFILE
-   fi
-fi
-
-
-# 设置所有网口可访问网页终端
+# 允许所有网口访问 Web 终端 (ttyd)
 uci delete ttyd.@ttyd[0].interface
 
-# 设置所有网口可连接 SSH
+# 允许所有网口连接 SSH
 uci set dropbear.@dropbear[0].Interface=''
 uci commit
 
-# 设置编译作者信息
+# 修改编译者信息
 FILE_PATH="/etc/openwrt_release"
-NEW_DESCRIPTION="Compiled by jet"
+NEW_DESCRIPTION="Compiled by Jetwalk"
 sed -i "s/DISTRIB_DESCRIPTION='[^']*'/DISTRIB_DESCRIPTION='$NEW_DESCRIPTION'/" "$FILE_PATH"
+
+# shell修改为bash
+chsh -s /bin/bash
+
+# 修改 SSH 登录欢迎信息（/etc/banner）
+cat << EOF > /etc/banner
+-------------------------------------
+ Welcome to ImmortalWrt by Jetwalk！
+-------------------------------------
+EOF
+
+# 设置文件权限
+chmod 644 /etc/banner
 
 exit 0
