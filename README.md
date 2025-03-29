@@ -7,11 +7,7 @@
 它是一个工作流。可快速构建 带docker且支持自定义固件大小的 immortalWrt
 > 1、支持自定义固件大小 默认1GB <br>
 > 2、支持预安装docker（可选）<br>
-> 3、目前支持x86-64 和 rockchip 两个平台（后续会增加）<br>
-> 4、新增支持MT3000/MT2500/MT6000/B2200（docker可选）<br>
-> 5、新增全志平台R1S、香橙派Zero3等机型的工作流<br>
-> 6、新增用户预设置pppoe拨号功能<br>
-> 7、新增树莓派①②③④⑤<br>
+> 3、新增用户预设置pppoe拨号功能<br>
 
 
 ## 如何查询都有哪些插件?
@@ -28,7 +24,7 @@ https://mirrors.sjtug.sjtu.edu.cn/immortalwrt/releases/23.05.4/packages/x86_64/l
 所谓正常的路由模式 就是指多网口用户，多网口的意思就是2个或者2个以上网口的情况。<br>
 一般wan用于拨号或者自动获取ip <br>
 而其他lan一般是给其他设备分配dhcp<br>
-这种情况下 你可以修改路由器的默认ip  `192.168.100.1` 比如你可以修改为`192.168.80.1 ` 诸如此类。<br>
+这种情况下 你可以修改路由器的默认ip  `192.168.50.1` 比如你可以修改为`192.168.80.1 ` 诸如此类。<br>
 没错，修改此ip 无非就是为了避免跟光猫或者跟家庭中的其他路由器网段冲突。大多数用户，无需更改。
 
 ## 该固件默认属性？(必读)
@@ -39,11 +35,8 @@ https://mirrors.sjtug.sjtu.edu.cn/immortalwrt/releases/23.05.4/packages/x86_64/l
 - 综合上述特点，【单网口设备】应该先接路由器，先在上级路由器查看一下它的ip 再访问。
 - 上述特点 你都可以通过 `99-custom.sh` 配置和调整
 
-## ❤️其它GitHub Action项目推荐🌟 （建议收藏）⬇️
-https://github.com/wukongdaily/RunFilesBuilder<br>
-https://github.com/wukongdaily/DockerTarBuilder
-
 ## ❤️如何构建docker版ImmortalWrt（建议收藏）⬇️
 https://wkdaily.cpolar.top/15
 # 🌟鸣谢
 ### https://github.com/immortalwrt
+### https://github.com/wukongdaily
