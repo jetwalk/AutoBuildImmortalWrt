@@ -34,10 +34,7 @@ PACKAGES="$PACKAGES luci-i18n-opkg-zh-cn"
 PACKAGES="$PACKAGES luci-i18n-ttyd-zh-cn"
 PACKAGES="$PACKAGES luci-i18n-frpc-zh-cn"
 PACKAGES="$PACKAGES openssh-sftp-server"
-# nikki
-PACKAGES="$PACKAGES nikki"
-PACKAGES="$PACKAGES luci-app-nikki"
-PACKAGES="$PACKAGES luci-i18n-nikki-zh-cn"
+
 # WireGuard
 PACKAGES="$PACKAGES wireguard-tools"
 PACKAGES="$PACKAGES kmod-wireguard"
