@@ -35,7 +35,10 @@ PACKAGES="$PACKAGES luci-i18n-ttyd-zh-cn"
 PACKAGES="$PACKAGES luci-app-openclash"
 PACKAGES="$PACKAGES luci-i18n-frpc-zh-cn"
 PACKAGES="$PACKAGES openssh-sftp-server"
-
+# WireGuard 插件
+PACKAGES="$PACKAGES wireguard-tools"
+PACKAGES="$PACKAGES kmod-wireguard"
+PACKAGES="$PACKAGES luci-proto-wireguard"
 # vlmcsd 
 PACKAGES="$PACKAGES luci-i18n-vlmcsd-zh-cn"
 # Wake-on-LAN
